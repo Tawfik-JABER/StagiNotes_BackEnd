@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\Hash;
 class DirectorSeeder extends Seeder
 {
     /**
-     * Run the database seeds.
+     * Run the database seeeeds.
      */
     public function run(): void
     {
