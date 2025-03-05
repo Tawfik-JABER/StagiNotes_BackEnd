@@ -20,6 +20,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Laravel\Sanctum\PersonalAccessToken;
+use Illuminate\Support\Facades\Storage;
 
 class FormatteurController extends Controller
 {
@@ -344,7 +345,51 @@ class FormatteurController extends Controller
         ]);
     }
 
-
-
     // ----------------------------------------------------- insert notes Process
+    // _________________________________________________________________ upload Profile Image
+
+    public function uploadProfileImage(Request $request)
+    {
+        $request->validate([
+            'image' => 'required|image|mimes:jpeg,png,jpg|max:2048', // Validate image
+        ]);
+
+        $formateur = Auth::user(); // Get authenticated formateur
+
+        // Delete the old image if exists
+        if ($formateur->image_url) {
+            Storage::delete('public/images/' . basename($formateur->image_url));
+        }
+
+        // Store new image
+        $imagePath = $request->file('image')->store('public/images');
+        $imageUrl = str_replace('public/', 'storage/', $imagePath); // Convert path for public access
+
+        // Update formateur's image_url
+        $formateur->update(['image_url' => $imageUrl]);
+
+        return response()->json([
+            'message' => 'Profile image uploaded successfully',
+            'image_url' => asset($imageUrl),
+        ], 200);
+    }
+
+    // _________________________________________________________________ delete Profile Image
+
+    public function deleteProfileImage()
+    {
+        $formateur = Auth::user();
+
+        if (!$formateur->image_url) {
+            return response()->json(['message' => 'No image to delete'], 400);
+        }
+
+        // Delete the stored image
+        Storage::delete('public/images/' . basename($formateur->image_url));
+
+        // Remove image URL from database
+        $formateur->update(['image_url' => null]);
+
+        return response()->json(['message' => 'Profile image deleted successfully'], 200);
+    }
 }
