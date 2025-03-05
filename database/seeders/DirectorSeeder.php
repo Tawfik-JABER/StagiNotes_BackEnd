@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\Hash;
 class DirectorSeeder extends Seeder
 {
     /**
-     * Run the database seeeeds.
+     * Run the databasees seeeeds.
      */
     public function run(): void
     {
@@ -49,15 +49,32 @@ class DirectorSeeder extends Seeder
 
             // Stagiaire::create($data);
         $data = [
-            'cin' => 'FB285261' ,
-            'nom' => 'Jaber',
-            'prenom' => 'Tawfik',
+            'cin' => '23423d',
+            'nom' => 'tawfik',
+            'prenom' => 'jaber',
             'email' => 'tawfik@edu-ofppt.ma',
             'password' => Hash::make('password'),
-            'sexe' =>'Male',
+            'fill_id'=>1,
+            'numero'=>57,
+            'cef'=>"123478765",
+            'group'=>"101",
+            'annee'=>1,
+            'niveau'=>"ts",
+            'sexe'=>"male",
             ];
 
-            Director::create($data);
+        // Stagiaire::create($data);
+
+        DB::table('directors')->insert([
+            'cin' => 'AB123456',
+            'nom' => 'Doe',
+            'prenom' => 'John',
+            'email' => 'johndoe@example.com',
+            'password' => Hash::make('password123'),
+            'sexe' => 'male',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
 }
 }
 

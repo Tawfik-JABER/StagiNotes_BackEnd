@@ -22,3 +22,8 @@ Route::delete('/logout/{token?}',[StagiaireController::class,'logout']);
 Route::get('/',[StagiaireController::class,'index']);
 
 Route::get('/showNotes',[StagiaireController::class,'showNotes']);
+
+// ------------------ Profile image (Upload / Delete)
+
+Route::post('/uploadProfileImage', [StagiaireController::class, 'uploadProfileImage']);
+Route::delete('/deleteProfileImage', [StagiaireController::class, 'deleteProfileImage']);

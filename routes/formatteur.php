@@ -26,3 +26,20 @@ Route::get('/form_data', [FormatteurController::class,"form_data"]);
 Route::post('/stagiaires', [FormatteurController::class,"stagiaires"]);
 
 Route::post('/store_note', [FormatteurController::class,"store_note"]);
+
+// ------------------ Profile image (Upload / Delete)
+
+Route::post('/uploadProfileImage', [FormatteurController::class, 'uploadProfileImage']);
+Route::delete('/deleteProfileImage', [FormatteurController::class, 'deleteProfileImage']);
+
+
+Route::get('/modules-by-filliere/{filliereId}', [FormatteurController::class, 'getModulesByFilliere']);
+
+Route::get('/groups-by-filliere/{filliereId}', [FormatteurController::class, 'getGroupsByFilliere']);
+
+Route::get('/formatteur/get-notes', [FormatteurController::class, 'getNotes']);
+
+
+// ------------------ Affiche Stagiaire Notes
+Route::get('/showStagiaireInfo',[FormatteurController::class,'showStagiaireInfo']);
+Route::get('/showStagiaireNotes',[FormatteurController::class,'showStagiaireNotes']);

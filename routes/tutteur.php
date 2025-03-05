@@ -63,3 +63,7 @@ Route::delete('/deleteAbsence/{id}',[TutteurController::class,'deleteAbsence']);
 Route::get('/showStagiaireInfo',[TutteurController::class,'showStagiaireInfo']);
 Route::get('/showStagiaireNotes',[TutteurController::class,'showStagiaireNotes']);
 
+// ------------------ Profile image (Upload / Delete)
+
+Route::post('/uploadProfileImage', [TutteurController::class, 'uploadProfileImage']);
+Route::delete('/deleteProfileImage', [TutteurController::class, 'deleteProfileImage']);

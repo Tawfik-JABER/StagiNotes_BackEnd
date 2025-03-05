@@ -17,5 +17,6 @@ class Director extends Authenticatable
         'password',
         'sexe',
         'email_verify',
+        'image_url',
     ];
 }

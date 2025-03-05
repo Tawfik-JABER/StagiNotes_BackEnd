@@ -18,6 +18,7 @@ class Formatteur extends Authenticatable
         'password',
         'sexe',
         'email_verify',
+        'image_url',
         'login_at',
     ];
     public function formateurFilliereModule()

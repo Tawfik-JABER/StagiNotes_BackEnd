@@ -18,6 +18,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\PersonalAccessToken;
 
 class TutteurController extends Controller
@@ -394,12 +395,12 @@ class TutteurController extends Controller
         }
         return response([
             "success" => true,
-            "message" => "Le Stagiaire a été modifié avec succès",
+            "message" => "La Planification a été modifié avec succès",
         ], 200);
 
         return response([
             "success" => false,
-            "message" => "Erreur lors de la modification du Stagiaire",
+            "message" => "Erreur lors de la modification du Planification",
         ], 400);
     }
     public function deleteFormatteurFiliereModule($id): Response
@@ -450,11 +451,11 @@ class TutteurController extends Controller
             ]);
             $addStagiaireModule->save();
             return Response([
-                "message" => "Stagiaire a été ajoutée avec succès",
+                "message" => "Planification a été ajoutée avec succès",
             ]);
         }
         return Response([
-            'message' => 'les données de Stagiaire incorrect',
+            'message' => 'les données de Planification incorrect',
         ]);
     }
     public function updateStagiaireModule(Request $request, $id): Response
@@ -472,12 +473,12 @@ class TutteurController extends Controller
         }
         return response([
             "success" => true,
-            "message" => "Le Stagiaire a été modifié avec succès",
+            "message" => "Le Planification a été modifié avec succès",
         ], 200);
 
         return response([
             "success" => false,
-            "message" => "Erreur lors de la modification du Stagiaire",
+            "message" => "Erreur lors de la modification du Planification",
         ], 400);
     }
     public function deleteStagiaireModule($id): Response
@@ -619,5 +620,50 @@ class TutteurController extends Controller
         ]);
     }
 
+    // _________________________________________________________________ upload Profile Image
 
+    public function uploadProfileImage(Request $request)
+    {
+        $request->validate([
+            'image' => 'required|image|mimes:jpeg,png,jpg|max:2048', // Validate image
+        ]);
+
+        $tutteur = Auth::user(); // Get authenticated tutteur
+
+        // Delete the old image if exists
+        if ($tutteur->image_url) {
+            Storage::delete('public/images/' . basename($tutteur->image_url));
+        }
+
+        // Store new image
+        $imagePath = $request->file('image')->store('public/images');
+        $imageUrl = str_replace('public/', 'storage/', $imagePath); // Convert path for public access
+
+        // Update tutteur's image_url
+        $tutteur->update(['image_url' => $imageUrl]);
+
+        return response()->json([
+            'message' => 'Profile image uploaded successfully',
+            'image_url' => asset($imageUrl),
+        ], 200);
+    }
+
+    // _________________________________________________________________ delete Profile Image
+
+    public function deleteProfileImage()
+    {
+        $tutteur = Auth::user();
+
+        if (!$tutteur->image_url) {
+            return response()->json(['message' => 'No image to delete'], 400);
+        }
+
+        // Delete the stored image
+        Storage::delete('public/images/' . basename($tutteur->image_url));
+
+        // Remove image URL from database
+        $tutteur->update(['image_url' => null]);
+
+        return response()->json(['message' => 'Profile image deleted successfully'], 200);
+    }
 }

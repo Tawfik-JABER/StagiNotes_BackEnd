@@ -19,5 +19,6 @@ class Tutteur extends Authenticatable
         'sexe',
         'email_verify',
         'login_at',
+        'image_url',
     ];
 }

@@ -47,7 +47,11 @@ Route::delete('/deleteFiliere/{id}',[DirectorController::class,'deleteFiliere'])
 
 // ------------------ Show Stagiaires and Modules
 
-
 Route::get('/showStagiaires',[DirectorController::class,'showStagiaires']);
 Route::get('/showModules',[DirectorController::class,'showModules']);
+
+// ------------------ Profile image (Upload / Delete)
+
+Route::post('/uploadProfileImage', [DirectorController::class, 'uploadProfileImage']);
+Route::delete('/deleteProfileImage', [DirectorController::class, 'deleteProfileImage']);
 

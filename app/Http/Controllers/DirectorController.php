@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\PersonalAccessToken;
 
 class DirectorController extends Controller
@@ -39,17 +40,38 @@ class DirectorController extends Controller
             return response()->json(['message' => 'Invalid email'], 404);
         }
 
-        // Generate a new password (for demonstration purposes)
+        // Generate a new password
         $newPassword = substr(md5(microtime()), 0, 8);
         $director->password = Hash::make($newPassword);
         $director->save();
-        // $director->update([
-        //     "password" => Hash::make($newPassword),
-        // ]);
+
+        // HTML email content
+        $htmlContent = "
+        <div style='width: 100%; max-width: 600px; margin: 0 auto; padding: 20px; font-family: Arial, sans-serif; color: #333;'>
+            <div style='background-color: #f7f7f7; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);'>
+                <h2 style='text-align: center; color: #4CAF50;'>Réinitialisation du Mot de Passe</h2>
+                <p style='text-align: center; font-size: 16px; line-height: 1.6;'>
+                    Bonjour, <br>
+                    Nous avons généré un nouveau mot de passe pour vous. Veuillez le trouver ci-dessous et l'utiliser pour vous connecter à votre compte.
+                </p>
+                <p style='text-align: center; margin: 20px 0;'>
+                    <span style='display: inline-block; background-color: #4CAF50; color: #fff; padding: 10px 20px; font-size: 18px; font-weight: bold; border-radius: 5px;'>
+                        $newPassword
+                    </span>
+                </p>
+                <p style='text-align: center; font-size: 14px; color: #777;'>
+                    Veuillez changer votre mot de passe après vous être connecté pour des raisons de sécurité.
+                </p>
+            </div>
+            <div style='text-align: center; margin-top: 20px; color: red;'>
+                <small style='color: #aaa;'>Si vous n'avez pas demandé de réinitialisation de mot de passe, veuillez ignorer cet e-mail.</small>
+            </div>
+        </div>";
 
         // Send the new password to the director's email
-        Mail::raw("Your new password is: $newPassword", function ($message) use ($email) {
-            $message->to($email)->subject('Password Reset');
+        Mail::html($htmlContent, function ($message) use ($email) {
+            $message->to($email)
+                    ->subject('Password Reset');
         });
 
         return response()->json(['message' => 'Password reset successful']);
@@ -401,5 +423,52 @@ class DirectorController extends Controller
         ]);
 
         return response()->json(['message' => 'Password changed successfully']);
+    }
+
+    // _________________________________________________________________ upload Profile Image
+
+    public function uploadProfileImage(Request $request)
+    {
+        $request->validate([
+            'image' => 'required|image|mimes:jpeg,png,jpg|max:2048', // Validate image
+        ]);
+
+        $director = Auth::user(); // Get authenticated director
+
+        // Delete the old image if exists
+        if ($director->image_url) {
+            Storage::delete('public/images/' . basename($director->image_url));
+        }
+
+        // Store new image
+        $imagePath = $request->file('image')->store('public/images');
+        $imageUrl = str_replace('public/', 'storage/', $imagePath); // Convert path for public access
+
+        // Update director's image_url
+        $director->update(['image_url' => $imageUrl]);
+
+        return response()->json([
+            'message' => 'Profile image uploaded successfully',
+            'image_url' => asset($imageUrl),
+        ], 200);
+    }
+
+    // _________________________________________________________________ delete Profile Image
+
+    public function deleteProfileImage()
+    {
+        $director = Auth::user();
+
+        if (!$director->image_url) {
+            return response()->json(['message' => 'No image to delete'], 400);
+        }
+
+        // Delete the stored image
+        Storage::delete('public/images/' . basename($director->image_url));
+
+        // Remove image URL from database
+        $director->update(['image_url' => null]);
+
+        return response()->json(['message' => 'Profile image deleted successfully'], 200);
     }
 }

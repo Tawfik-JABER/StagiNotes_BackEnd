@@ -6,6 +6,7 @@ use App\Models\DeuxiemControle;
 use App\Models\Efm;
 use Illuminate\Http\Request;
 use App\Models\Filliere;
+use App\Models\Formateur_filliere_module;
 use App\Models\Formatteur;
 use App\Models\Module;
 use App\Models\PremierControle;
@@ -152,30 +153,34 @@ class FormatteurController extends Controller
     public function form_data()
     {
         $userId = Auth::user()->id;
+
         $fillieres = DB::table('fillieres')
-        ->join('formateur_filliere_modules', 'fillieres.id', '=', 'formateur_filliere_modules.filliere_id')
-        ->select('fillieres.*')
-        ->where('formateur_filliere_modules.formateur_id', '=', $userId)
-        ->get();
-        $annees = DB::table('stagiaires')
-        ->join('formateur_filliere_modules', 'stagiaires.fill_id', '=', 'formateur_filliere_modules.filliere_id')
-        ->select('stagiaires.annee')
-        ->where('formateur_filliere_modules.formateur_id', '=', $userId)
-        ->get();
-        $groups = DB::table('stagiaires')
-        ->join('formateur_filliere_modules', 'stagiaires.fill_id', '=', 'formateur_filliere_modules.filliere_id')
-        ->select('stagiaires.group')
+            ->join('formateur_filliere_modules', 'fillieres.id', '=', 'formateur_filliere_modules.filliere_id')
+            ->select('fillieres.*')
             ->where('formateur_filliere_modules.formateur_id', '=', $userId)
+            ->distinct()
             ->get();
+
+        $annees = DB::table('stagiaires')
+            ->join('formateur_filliere_modules', 'stagiaires.fill_id', '=', 'formateur_filliere_modules.filliere_id')
+            ->select('stagiaires.annee')
+            ->where('formateur_filliere_modules.formateur_id', '=', $userId)
+            ->distinct()
+            ->get();
+
+        $groups = DB::table('stagiaires')
+            ->join('formateur_filliere_modules', 'stagiaires.fill_id', '=', 'formateur_filliere_modules.filliere_id')
+            ->select('stagiaires.group')
+            ->where('formateur_filliere_modules.formateur_id', '=', $userId)
+            ->distinct()
+            ->get();
+
         $modules = DB::table('modules')
             ->join('formateur_filliere_modules', 'modules.id', '=', 'formateur_filliere_modules.module_id')
             ->select('modules.*')
             ->where('formateur_filliere_modules.formateur_id', '=', $userId)
+            ->distinct()
             ->get();
-            // $fillieres = Filliere::all(['id', 'nom']);
-        // $annees = Stagiaire::distinct('annee')->pluck('annee');
-        // $groups = Stagiaire::distinct('group')->pluck('group');
-        // $modules = Module::all(['id', 'nom']);
 
         $formData = [
             'fillieres' => $fillieres,
@@ -209,35 +214,137 @@ class FormatteurController extends Controller
         $controleType = $request->input('controleType');
 
         // Determine the appropriate Controle model based on controleType
-        $controleModel = $this->getControleModel($controleType);
+        if ($controleType === 'PremierControle') {
+            $controleModel = PremierControle::class;
+        } elseif ($controleType === 'DeuxiemControle') {
+            $controleModel = DeuxiemControle::class;
+        } elseif ($controleType === 'TroisiemControle') {
+            $controleModel = TroisiemControle::class;
+        }else {
+            $controleModel = Efm::class;
+        }
 
-        // Store the note in the appropriate Controle model
-        $controle = $controleModel::create(
-            ['stagiaire_id' => $stagiaireId, 'module_id' => $moduleId,"annee_schol"=>"2023"
-            ,'note' => $note]
-        );
-        $controle->save();
+        // Check if a record already exists
+        $controle = $controleModel::where('stagiaire_id', $stagiaireId)
+            ->where('module_id', $moduleId)
+            ->where('annee_schol', date("Y"))
+            ->first();
 
-        return response()->json(['message' => 'Note stored successfully']);
+        if ($controle) {
+            // If exists, update the note
+            $controle->update(['note' => $note]);
+            return response()->json(['message' => 'Note updated successfully']);
+        } else {
+            // Otherwise, create a new entry
+            $controleModel::create([
+                'stagiaire_id' => $stagiaireId,
+                'module_id' => $moduleId,
+                'annee_schol' => date("Y"),
+                'note' => $note
+            ]);
+
+            return response()->json(['message' => 'Note stored successfully']);
+        }
     }
 
-    private function getControleModel($controleType)
+    public function getNotes(Request $request)
     {
-        // Map controleType to the corresponding Controle model
+        $stagiaireIds = $request->input('stagiaireIds'); // Array of stagiaire IDs
+        $moduleId = $request->input('moduleId');
+        $controleType = $request->input('controleType');
 
-        switch ($controleType) {
-            case 'premier_controles':
-                return PremierControle::class;
-                case 'deuxieme_controles':
-                    return DeuxiemControle::class;
-                case 'troisiem_controles':
-                    return TroisiemControle::class;
-                case 'efms':
-                    return Efm::class;
-                default:
-                // Throw an error or handle the case where the controleType is not recognized
-                break;
-            }
+        // Determine the correct model based on controleType
+        if ($controleType === 'PremierControle') {
+            $controleModel = PremierControle::class;
+        } elseif ($controleType === 'DeuxiemControle') {
+            $controleModel = DeuxiemControle::class;
+        } else {
+            $controleModel = TroisiemControle::class;
+        }
+
+        // Fetch notes for selected stagiaires and module
+        $notes = $controleModel::whereIn('stagiaire_id', $stagiaireIds)
+            ->where('module_id', $moduleId)
+            ->pluck('note', 'stagiaire_id'); // Returns associative array: [stagiaire_id => note]
+
+        return response()->json($notes);
     }
+
+    public function getModulesByFilliere($filliereId)
+    {
+        $userId = Auth::user()->id;
+
+        // Fetch only the modules that the formateur teaches in the selected filliere
+        $modules = DB::table('modules')
+            ->join('formateur_filliere_modules', 'modules.id', '=', 'formateur_filliere_modules.module_id')
+            ->where('formateur_filliere_modules.filliere_id', '=', $filliereId)
+            ->where('formateur_filliere_modules.formateur_id', '=', $userId) // Ensure only the formateur's modules
+            ->select('modules.id', 'modules.nom')
+            ->distinct()
+            ->get();
+
+        return response()->json($modules);
+    }
+
+    public function getGroupsByFilliere($filliereId)
+    {
+        // Fetch unique groups from stagiaires where fill_id matches the selected filliere
+        $groups = DB::table('stagiaires')
+            ->where('fill_id', '=', $filliereId)
+            ->select('group')
+            ->distinct()
+            ->get();
+
+        return response()->json($groups);
+    }
+
+    public function showStagiaireInfo()
+    {
+        $formateurId = Auth::user()->id;
+        // Get the fillieres taught by the formateur
+        $fillieres = Formateur_filliere_module::where('formateur_id', $formateurId)
+                    ->pluck('filliere_id');
+
+        // Get the stagiaires who belong to these fillieres
+        $stagiaires = Stagiaire::whereIn('fill_id', $fillieres)->get();
+
+        return response()->json([
+            'stagiaires' => $stagiaires,
+        ]);
+    }
+
+    public function showStagiaireNotes(Request $request) : Response
+    {
+        $id = $request->id;
+
+        $stagiaire = Stagiaire::where('id', $id)->first();
+
+        $modules = $stagiaire->modules;
+
+        $notes = [];
+
+        foreach ($modules as $module) {
+            $premierControle = $module->premierControles()->where('stagiaire_id', $stagiaire->id)->first();
+            $deuxiemeControle = $module->deuxiemeControles()->where('stagiaire_id', $stagiaire->id)->first();
+            $troisiemeControle = $module->troisiemControles()->where('stagiaire_id', $stagiaire->id)->first();
+            $efm = $module->efm()->where('stagiaire_id', $stagiaire->id)->first();
+
+            $notes[] = [
+                'module' => $module->nom,
+                'premierControle' => $premierControle ? $premierControle->note : '',
+                'deuxiemeControle' => $deuxiemeControle ? $deuxiemeControle->note : '',
+                'troisiemeControle' => $troisiemeControle ? $troisiemeControle->note : '',
+                'efm' => $efm ? $efm->note : '',
+                'noteGenerale' => $module->pivot->note_general,
+            ];
+        }
+
+        return response([
+            'notes' => $notes
+        ]);
+    }
+
+
+
     // ----------------------------------------------------- insert notes Process
 }

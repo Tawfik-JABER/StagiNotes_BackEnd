@@ -24,6 +24,7 @@ class Stagiaire extends Authenticatable
         'niveau',
         'sexe',
         'email_verify',
+        'image_url',
         'login_at',
     ];
     public function modules()
